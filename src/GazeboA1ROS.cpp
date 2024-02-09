@@ -55,8 +55,9 @@ GazeboA1ROS::GazeboA1ROS(ros::NodeHandle &_nh) {
     sub_foot_contact_msg[2] = nh.subscribe("/visual/RL_foot_contact/the_force", 2, &GazeboA1ROS::RL_foot_contact_callback, this);
     sub_foot_contact_msg[3] = nh.subscribe("/visual/RR_foot_contact/the_force", 2, &GazeboA1ROS::RR_foot_contact_callback, this);
 
-    // sub_joy_msg = nh.subscribe("/joy", 1000, &GazeboA1ROS::joy_callback, this);
+    sub_joy_msg = nh.subscribe("/joy", 1000, &GazeboA1ROS::joy_callback, this);
     sub_twist_msg = nh.subscribe("/cmd_vel", 1000, &GazeboA1ROS::twist_callback, this); 
+    stop_msg = nh.subscribe("/stop", 1000, &GazeboA1ROS::stop_callback, this); 
 
     joy_cmd_ctrl_state = 1;
     joy_cmd_ctrl_state_change_request = false;
@@ -112,6 +113,7 @@ GazeboA1ROS::GazeboA1ROS(ros::NodeHandle &_nh) {
 
 bool GazeboA1ROS::update_foot_forces_grf(double dt) {
     a1_ctrl_states.foot_forces_grf = _root_control.compute_grf(a1_ctrl_states, dt);
+
     return true;
 }
 
@@ -219,14 +221,44 @@ bool GazeboA1ROS::send_cmd() {
     // send control cmd to robot via ros topic
     unitree_legged_msgs::LowCmd low_cmd;
 
-    for (int i = 0; i < 12; i++) {
-        low_cmd.motorCmd[i].mode = 0x0A;
-        low_cmd.motorCmd[i].q = 0;
-        low_cmd.motorCmd[i].dq = 0;
-        low_cmd.motorCmd[i].Kp = 0;
-        low_cmd.motorCmd[i].Kd = 0;
-        low_cmd.motorCmd[i].tau = a1_ctrl_states.joint_torques(i, 0);
-        pub_joint_cmd[i].publish(low_cmd.motorCmd[i]);
+    // stop logic added
+    if (a1_ctrl_states.movement_mode == 0){
+        double pos[12] = {0.0, 0.67, -1.3, -0.0, 0.67, -1.3, 
+                        0.0, 0.67, -1.3, -0.0, 0.67, -1.3};
+
+        for(int i=0; i<4; i++){
+            low_cmd.motorCmd[i*3+0].mode = 0x0A;
+            low_cmd.motorCmd[i*3+0].Kp = 70;
+            low_cmd.motorCmd[i*3+0].dq = 0;
+            low_cmd.motorCmd[i*3+0].Kd = 3;
+            low_cmd.motorCmd[i*3+0].tau = 0;
+            low_cmd.motorCmd[i*3+1].mode = 0x0A;
+            low_cmd.motorCmd[i*3+1].Kp = 180;
+            low_cmd.motorCmd[i*3+1].dq = 0;
+            low_cmd.motorCmd[i*3+1].Kd = 8;
+            low_cmd.motorCmd[i*3+1].tau = 0;
+            low_cmd.motorCmd[i*3+2].mode = 0x0A;
+            low_cmd.motorCmd[i*3+2].Kp = 300;
+            low_cmd.motorCmd[i*3+2].dq = 0;
+            low_cmd.motorCmd[i*3+2].Kd = 15;
+            low_cmd.motorCmd[i*3+2].tau = 0;
+        }
+
+        for(int j=0; j<12; j++){
+            low_cmd.motorCmd[j].q = pos[j]; 
+            pub_joint_cmd[j].publish(low_cmd.motorCmd[j]);
+        }
+    }
+    else {
+        for (int i = 0; i < 12; i++) {
+            low_cmd.motorCmd[i].mode = 0x0A;
+            low_cmd.motorCmd[i].q = 0;
+            low_cmd.motorCmd[i].dq = 0;
+            low_cmd.motorCmd[i].Kp = 0;
+            low_cmd.motorCmd[i].Kd = 0;
+            low_cmd.motorCmd[i].tau = a1_ctrl_states.joint_torques(i, 0);
+            pub_joint_cmd[i].publish(low_cmd.motorCmd[i]);
+        }
     }
 
     return true;
@@ -381,41 +413,45 @@ void GazeboA1ROS::RR_foot_contact_callback(const geometry_msgs::WrenchStamped &f
     a1_ctrl_states.foot_force[3] = force.wrench.force.z;
 }
 
+void GazeboA1ROS::stop_callback(const std_msgs::Empty::ConstPtr &empty_msg){
+
+    // stop request
+    std::cout << "You have pressed the stop button!!!!" << std::endl;
+    joy_cmd_ctrl_state_change_request = true;
+}
+
 void GazeboA1ROS::twist_callback(const geometry_msgs::Twist::ConstPtr &twist_msg){
 
     // Naive implementation of twist to joy_cmd
     joy_cmd_velx = twist_msg->linear.x;
     joy_cmd_vely = twist_msg->linear.y;
     joy_cmd_yaw_rate = twist_msg->angular.z;
-
-    // joy_cmd_roll_rate = twist_msg->angular.x;
-    // joy_cmd_pitch_rate = twist_msg->angular.y;
 }
 
-// void GazeboA1ROS::
-// joy_callback(const sensor_msgs::Joy::ConstPtr &joy_msg) {
-//     // left updown
-//     joy_cmd_velz = joy_msg->axes[1] * JOY_CMD_BODY_HEIGHT_VEL;
+void GazeboA1ROS::
+joy_callback(const sensor_msgs::Joy::ConstPtr &joy_msg) {
+    // left updown
+    joy_cmd_velz = joy_msg->axes[1] * JOY_CMD_BODY_HEIGHT_VEL;
 
-//     //A
-//     if (joy_msg->buttons[0] == 1) {
-//         joy_cmd_ctrl_state_change_request = true;
-//     }
+    //A
+    if (joy_msg->buttons[0] == 1) {
+        joy_cmd_ctrl_state_change_request = true;
+    }
 
-//     // right updown
-//     joy_cmd_velx = joy_msg->axes[4] * JOY_CMD_VELX_MAX;
-//     // right horiz
-//     joy_cmd_vely = joy_msg->axes[3] * JOY_CMD_VELY_MAX;
-//     // left horiz
-//     joy_cmd_yaw_rate = joy_msg->axes[0] * JOY_CMD_YAW_MAX;
-//     // up-down button
-//     joy_cmd_pitch_rate = joy_msg->axes[7] * JOY_CMD_PITCH_MAX;
-//     // left-right button
-//     joy_cmd_roll_rate = joy_msg->axes[6] * JOY_CMD_ROLL_MAX;
+    // right updown
+    joy_cmd_velx = joy_msg->axes[4] * JOY_CMD_VELX_MAX;
+    // right horiz
+    joy_cmd_vely = joy_msg->axes[3] * JOY_CMD_VELY_MAX;
+    // left horiz
+    joy_cmd_yaw_rate = joy_msg->axes[0] * JOY_CMD_YAW_MAX;
+    // up-down button
+    joy_cmd_pitch_rate = joy_msg->axes[7] * JOY_CMD_PITCH_MAX;
+    // left-right button
+    joy_cmd_roll_rate = joy_msg->axes[6] * JOY_CMD_ROLL_MAX;
 
-//     // lb
-//     if (joy_msg->buttons[4] == 1) {
-//         std::cout << "You have pressed the exit button!!!!" << std::endl;
-//         joy_cmd_exit = true;
-//     }
-// }
+    // lb
+    if (joy_msg->buttons[4] == 1) {
+        std::cout << "You have pressed the exit button!!!!" << std::endl;
+        joy_cmd_exit = true;
+    }
+}

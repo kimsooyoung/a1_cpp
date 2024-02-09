@@ -22,6 +22,7 @@
 #include <sensor_msgs/Imu.h>
 #include <sensor_msgs/JointState.h>
 #include <nav_msgs/Odometry.h>
+#include <std_msgs/Empty.h>
 #include <geometry_msgs/PoseStamped.h>
 #include <geometry_msgs/TwistStamped.h>
 #include <geometry_msgs/PoseWithCovarianceStamped.h>
@@ -60,8 +61,9 @@ public:
     void imu_callback(const sensor_msgs::Imu::ConstPtr &imu);
 
     // joy to twist command
-    // void joy_callback(const sensor_msgs::Joy::ConstPtr &joy_msg);
+    void joy_callback(const sensor_msgs::Joy::ConstPtr &joy_msg);
     void twist_callback(const geometry_msgs::Twist::ConstPtr &twist_msg);
+    void stop_callback(const std_msgs::Empty::ConstPtr &empty_msg);
 
     void FL_hip_state_callback(const unitree_legged_msgs::MotorState &a1_joint_state);
 
@@ -113,8 +115,9 @@ private:
     ros::Subscriber sub_imu_msg;
     
     // joy to twist command
-    // ros::Subscriber sub_joy_msg;
+    ros::Subscriber sub_joy_msg;
     ros::Subscriber sub_twist_msg;
+    ros::Subscriber stop_msg;
 
 
     // debug estimation
