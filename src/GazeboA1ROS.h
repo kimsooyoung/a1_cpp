@@ -59,7 +59,9 @@ public:
 
     void imu_callback(const sensor_msgs::Imu::ConstPtr &imu);
 
-    void joy_callback(const sensor_msgs::Joy::ConstPtr &joy_msg);
+    // joy to twist command
+    // void joy_callback(const sensor_msgs::Joy::ConstPtr &joy_msg);
+    void twist_callback(const geometry_msgs::Twist::ConstPtr &twist_msg);
 
     void FL_hip_state_callback(const unitree_legged_msgs::MotorState &a1_joint_state);
 
@@ -109,7 +111,11 @@ private:
     ros::Subscriber sub_foot_contact_msg[4];
     ros::Subscriber sub_gt_pose_msg;
     ros::Subscriber sub_imu_msg;
-    ros::Subscriber sub_joy_msg;
+    
+    // joy to twist command
+    // ros::Subscriber sub_joy_msg;
+    ros::Subscriber sub_twist_msg;
+
 
     // debug estimation
     ros::Publisher pub_estimated_pose;
