@@ -57,7 +57,9 @@ GazeboA1ROS::GazeboA1ROS(ros::NodeHandle &_nh) {
 
     sub_joy_msg = nh.subscribe("/joy", 1000, &GazeboA1ROS::joy_callback, this);
     sub_twist_msg = nh.subscribe("/cmd_vel", 1000, &GazeboA1ROS::twist_callback, this); 
-    stop_msg = nh.subscribe("/stop", 1000, &GazeboA1ROS::stop_callback, this); 
+
+    stand_srv = nh.advertiseService("/standing", &GazeboA1ROS::stand_service_callback, this);
+    walk_srv = nh.advertiseService("/walking", &GazeboA1ROS::walk_service_callback, this);
 
     joy_cmd_ctrl_state = 1;
     joy_cmd_ctrl_state_change_request = false;
@@ -142,6 +144,8 @@ bool GazeboA1ROS::main_update(double t, double dt) {
 
     prev_joy_cmd_ctrl_state = joy_cmd_ctrl_state;
 
+    // std::cout << "joy_cmd_ctrl_state_change_request : " << joy_cmd_ctrl_state_change_request << std::endl;
+
     if (joy_cmd_ctrl_state_change_request) {
         // toggle joy_cmd_ctrl_state
         joy_cmd_ctrl_state = joy_cmd_ctrl_state + 1;
@@ -162,6 +166,8 @@ bool GazeboA1ROS::main_update(double t, double dt) {
     a1_ctrl_states.root_euler_d[1] += joy_cmd_pitch_rate * dt;
     a1_ctrl_states.root_euler_d[2] += joy_cmd_yaw_rate * dt;
     a1_ctrl_states.root_pos_d[2] = joy_cmd_body_height;
+
+    // std::cout << "joy_cmd_ctrl_state : " << joy_cmd_ctrl_state << std::endl;
 
     // determine movement mode
     if (joy_cmd_ctrl_state == 1) {
@@ -413,11 +419,22 @@ void GazeboA1ROS::RR_foot_contact_callback(const geometry_msgs::WrenchStamped &f
     a1_ctrl_states.foot_force[3] = force.wrench.force.z;
 }
 
-void GazeboA1ROS::stop_callback(const std_msgs::Empty::ConstPtr &empty_msg){
+bool GazeboA1ROS::stand_service_callback(std_srvs::Empty::Request &req, std_srvs::Empty::Response &res){
+    std::cout << "[Mode change] Standing" << std::endl;
 
-    // stop request
-    std::cout << "You have pressed the stop button!!!!" << std::endl;
-    joy_cmd_ctrl_state_change_request = true;
+    if (a1_ctrl_states.movement_mode == 1)
+        joy_cmd_ctrl_state_change_request = true;
+
+    return true;
+}
+
+bool GazeboA1ROS::walk_service_callback(std_srvs::Empty::Request &req, std_srvs::Empty::Response &res){
+    std::cout << "[Mode change] Walking" << std::endl;
+
+    if (a1_ctrl_states.movement_mode == 0)
+        joy_cmd_ctrl_state_change_request = true;
+
+    return true;
 }
 
 void GazeboA1ROS::twist_callback(const geometry_msgs::Twist::ConstPtr &twist_msg){
@@ -430,8 +447,8 @@ void GazeboA1ROS::twist_callback(const geometry_msgs::Twist::ConstPtr &twist_msg
 
 void GazeboA1ROS::
 joy_callback(const sensor_msgs::Joy::ConstPtr &joy_msg) {
-    // left updown
-    joy_cmd_velz = joy_msg->axes[1] * JOY_CMD_BODY_HEIGHT_VEL;
+    // // left updown
+    // joy_cmd_velz = joy_msg->axes[1] * JOY_CMD_BODY_HEIGHT_VEL;
 
     //A
     if (joy_msg->buttons[0] == 1) {
@@ -439,11 +456,12 @@ joy_callback(const sensor_msgs::Joy::ConstPtr &joy_msg) {
     }
 
     // right updown
-    joy_cmd_velx = joy_msg->axes[4] * JOY_CMD_VELX_MAX;
+    joy_cmd_velx = joy_msg->axes[1] * JOY_CMD_VELX_MAX;
     // right horiz
-    joy_cmd_vely = joy_msg->axes[3] * JOY_CMD_VELY_MAX;
+    joy_cmd_vely = joy_msg->axes[0] * JOY_CMD_VELY_MAX;
     // left horiz
-    joy_cmd_yaw_rate = joy_msg->axes[0] * JOY_CMD_YAW_MAX;
+    joy_cmd_yaw_rate = joy_msg->axes[2] * JOY_CMD_YAW_MAX;
+    
     // up-down button
     joy_cmd_pitch_rate = joy_msg->axes[7] * JOY_CMD_PITCH_MAX;
     // left-right button

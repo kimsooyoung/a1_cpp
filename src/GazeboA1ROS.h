@@ -23,6 +23,7 @@
 #include <sensor_msgs/JointState.h>
 #include <nav_msgs/Odometry.h>
 #include <std_msgs/Empty.h>
+#include <std_srvs/Empty.h>
 #include <geometry_msgs/PoseStamped.h>
 #include <geometry_msgs/TwistStamped.h>
 #include <geometry_msgs/PoseWithCovarianceStamped.h>
@@ -63,7 +64,8 @@ public:
     // joy to twist command
     void joy_callback(const sensor_msgs::Joy::ConstPtr &joy_msg);
     void twist_callback(const geometry_msgs::Twist::ConstPtr &twist_msg);
-    void stop_callback(const std_msgs::Empty::ConstPtr &empty_msg);
+    bool stand_service_callback(std_srvs::Empty::Request &req, std_srvs::Empty::Response &res);
+    bool walk_service_callback(std_srvs::Empty::Request &req, std_srvs::Empty::Response &res);
 
     void FL_hip_state_callback(const unitree_legged_msgs::MotorState &a1_joint_state);
 
@@ -118,7 +120,10 @@ private:
     ros::Subscriber sub_joy_msg;
     ros::Subscriber sub_twist_msg;
     ros::Subscriber stop_msg;
+    ros::Subscriber start_msg;
 
+    ros::ServiceServer stand_srv;
+    ros::ServiceServer walk_srv;
 
     // debug estimation
     ros::Publisher pub_estimated_pose;

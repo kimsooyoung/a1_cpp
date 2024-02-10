@@ -14,6 +14,7 @@ find_package(catkin REQUIRED COMPONENTS
         roscpp
         rospy
         std_msgs
+        std_srvs
         geometry_msgs
         unitree_legged_msgs
         unitree_controller
