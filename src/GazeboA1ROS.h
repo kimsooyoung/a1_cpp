@@ -143,6 +143,7 @@ private:
     double joy_cmd_roll_ang = 0.0;
     double joy_cmd_body_height = 0.3;
 
+    int standing_cnt = 0;
     //  0 is standing, 1 is walking
     int joy_cmd_ctrl_state = 0;
     bool joy_cmd_ctrl_state_change_request = false;

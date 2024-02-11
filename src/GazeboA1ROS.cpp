@@ -229,8 +229,9 @@ bool GazeboA1ROS::send_cmd() {
 
     // stop logic added
     if (a1_ctrl_states.movement_mode == 0){
-        double pos[12] = {0.0, 0.67, -1.3, -0.0, 0.67, -1.3, 
-                        0.0, 0.67, -1.3, -0.0, 0.67, -1.3};
+        // FL FR RL RR
+        double pos[12] = {0.0, 0.65, -1.44, -0.0, 0.65, -1.44, 
+                        0.0, 0.72, -1.44, -0.0, 0.72, -1.44};
 
         for(int i=0; i<4; i++){
             low_cmd.motorCmd[i*3+0].mode = 0x0A;
@@ -250,12 +251,20 @@ bool GazeboA1ROS::send_cmd() {
             low_cmd.motorCmd[i*3+2].tau = 0;
         }
 
-        for(int j=0; j<12; j++){
-            low_cmd.motorCmd[j].q = pos[j]; 
-            pub_joint_cmd[j].publish(low_cmd.motorCmd[j]);
+        if(standing_cnt < 200){
+            for(int j=0; j<12; j++){
+                low_cmd.motorCmd[j].q = pos[j];
+                pub_joint_cmd[j].publish(low_cmd.motorCmd[j]);
+            }
+            standing_cnt += 1;
+            std::cout << "standing_cnt: " << standing_cnt << std::endl;
         }
+
     }
     else {
+        
+        standing_cnt = 0;
+
         for (int i = 0; i < 12; i++) {
             low_cmd.motorCmd[i].mode = 0x0A;
             low_cmd.motorCmd[i].q = 0;
@@ -447,10 +456,12 @@ void GazeboA1ROS::twist_callback(const geometry_msgs::Twist::ConstPtr &twist_msg
 
 void GazeboA1ROS::
 joy_callback(const sensor_msgs::Joy::ConstPtr &joy_msg) {
+
+    // jotstick D mode
     // // left updown
     // joy_cmd_velz = joy_msg->axes[1] * JOY_CMD_BODY_HEIGHT_VEL;
 
-    //A
+    // A
     if (joy_msg->buttons[0] == 1) {
         joy_cmd_ctrl_state_change_request = true;
     }
@@ -463,7 +474,7 @@ joy_callback(const sensor_msgs::Joy::ConstPtr &joy_msg) {
     joy_cmd_yaw_rate = joy_msg->axes[2] * JOY_CMD_YAW_MAX;
     
     // up-down button
-    joy_cmd_pitch_rate = joy_msg->axes[7] * JOY_CMD_PITCH_MAX;
+    joy_cmd_pitch_rate = joy_msg->axes[3] * JOY_CMD_PITCH_MAX;
     // left-right button
     joy_cmd_roll_rate = joy_msg->axes[6] * JOY_CMD_ROLL_MAX;
 
