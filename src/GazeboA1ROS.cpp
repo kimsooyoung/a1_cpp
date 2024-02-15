@@ -257,7 +257,7 @@ bool GazeboA1ROS::send_cmd() {
                 pub_joint_cmd[j].publish(low_cmd.motorCmd[j]);
             }
             standing_cnt += 1;
-            std::cout << "standing_cnt: " << standing_cnt << std::endl;
+            // std::cout << "standing_cnt: " << standing_cnt << std::endl;
         }
 
     }
