@@ -61,7 +61,7 @@ GazeboA1ROS::GazeboA1ROS(ros::NodeHandle &_nh) {
     stand_srv = nh.advertiseService("/standing", &GazeboA1ROS::stand_service_callback, this);
     walk_srv = nh.advertiseService("/walking", &GazeboA1ROS::walk_service_callback, this);
 
-    joy_cmd_ctrl_state = 1;
+    joy_cmd_ctrl_state = 0;
     joy_cmd_ctrl_state_change_request = false;
     prev_joy_cmd_ctrl_state = 1;
     joy_cmd_exit = false;
