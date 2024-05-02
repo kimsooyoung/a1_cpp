@@ -114,7 +114,7 @@ GazeboA1ROS::GazeboA1ROS(ros::NodeHandle &_nh) {
 }
 
 bool GazeboA1ROS::update_foot_forces_grf(double dt) {
-    a1_ctrl_states.foot_forces_grf = _root_control.compute_grf(a1_ctrl_states, dt);
+    a1_ctrl_states.foot_forces_grf = _root_control.compute_grf(a1_ctrl_states, dt, true);
 
     return true;
 }
@@ -227,57 +227,78 @@ bool GazeboA1ROS::send_cmd() {
     // send control cmd to robot via ros topic
     unitree_legged_msgs::LowCmd low_cmd;
 
-    // stop logic added
-    if (a1_ctrl_states.movement_mode == 0){
-        // FL FR RL RR
-        double pos[12] = {0.0, 0.65, -1.44, -0.0, 0.65, -1.44, 
-                        0.0, 0.72, -1.44, -0.0, 0.72, -1.44};
-
-        for(int i=0; i<4; i++){
-            low_cmd.motorCmd[i*3+0].mode = 0x0A;
-            low_cmd.motorCmd[i*3+0].Kp = 70;
-            low_cmd.motorCmd[i*3+0].dq = 0;
-            low_cmd.motorCmd[i*3+0].Kd = 3;
-            low_cmd.motorCmd[i*3+0].tau = 0;
-            low_cmd.motorCmd[i*3+1].mode = 0x0A;
-            low_cmd.motorCmd[i*3+1].Kp = 180;
-            low_cmd.motorCmd[i*3+1].dq = 0;
-            low_cmd.motorCmd[i*3+1].Kd = 8;
-            low_cmd.motorCmd[i*3+1].tau = 0;
-            low_cmd.motorCmd[i*3+2].mode = 0x0A;
-            low_cmd.motorCmd[i*3+2].Kp = 300;
-            low_cmd.motorCmd[i*3+2].dq = 0;
-            low_cmd.motorCmd[i*3+2].Kd = 15;
-            low_cmd.motorCmd[i*3+2].tau = 0;
-        }
-
-        if(standing_cnt < 200){
-            for(int j=0; j<12; j++){
-                low_cmd.motorCmd[j].q = pos[j];
-                pub_joint_cmd[j].publish(low_cmd.motorCmd[j]);
-            }
-            standing_cnt += 1;
-            // std::cout << "standing_cnt: " << standing_cnt << std::endl;
-        }
-
-    }
-    else {
-        
-        standing_cnt = 0;
-
-        for (int i = 0; i < 12; i++) {
-            low_cmd.motorCmd[i].mode = 0x0A;
-            low_cmd.motorCmd[i].q = 0;
-            low_cmd.motorCmd[i].dq = 0;
-            low_cmd.motorCmd[i].Kp = 0;
-            low_cmd.motorCmd[i].Kd = 0;
-            low_cmd.motorCmd[i].tau = a1_ctrl_states.joint_torques(i, 0);
-            pub_joint_cmd[i].publish(low_cmd.motorCmd[i]);
-        }
+    for (int i = 0; i < 12; i++) {
+        low_cmd.motorCmd[i].mode = 0x0A;
+        low_cmd.motorCmd[i].q = 0;
+        low_cmd.motorCmd[i].dq = 0;
+        low_cmd.motorCmd[i].Kp = 0;
+        low_cmd.motorCmd[i].Kd = 0;
+        low_cmd.motorCmd[i].tau = a1_ctrl_states.joint_torques(i, 0);
+        pub_joint_cmd[i].publish(low_cmd.motorCmd[i]);
     }
 
     return true;
 }
+
+// bool GazeboA1ROS::send_cmd() {
+//     _root_control.compute_joint_torques(a1_ctrl_states);
+
+//     // send control cmd to robot via ros topic
+//     unitree_legged_msgs::LowCmd low_cmd;
+
+//     // stop logic added
+//     if (a1_ctrl_states.movement_mode == 0){
+//         // FL FR RL RR
+//         double pos[12] = {0.0, 0.65, -1.44, -0.0, 0.65, -1.44, 
+//                         0.0, 0.72, -1.44, -0.0, 0.72, -1.44};
+
+//         for(int i=0; i<4; i++){
+//             low_cmd.motorCmd[i*3+0].mode = 0x0A;
+//             low_cmd.motorCmd[i*3+0].Kp = 70;
+//             low_cmd.motorCmd[i*3+0].dq = 0;
+//             low_cmd.motorCmd[i*3+0].Kd = 3;
+//             low_cmd.motorCmd[i*3+0].tau = 0;
+
+//             low_cmd.motorCmd[i*3+1].mode = 0x0A;
+//             low_cmd.motorCmd[i*3+1].Kp = 180;
+//             low_cmd.motorCmd[i*3+1].dq = 0;
+//             low_cmd.motorCmd[i*3+1].Kd = 8;
+//             low_cmd.motorCmd[i*3+1].tau = 0;
+            
+//             low_cmd.motorCmd[i*3+2].mode = 0x0A;
+//             low_cmd.motorCmd[i*3+2].Kp = 300;
+//             low_cmd.motorCmd[i*3+2].dq = 0;
+//             low_cmd.motorCmd[i*3+2].Kd = 15;
+//             low_cmd.motorCmd[i*3+2].tau = 0;
+//         }
+
+//         if(standing_cnt < 200){
+//             for(int j=0; j<12; j++){
+//                 low_cmd.motorCmd[j].q = pos[j];
+//                 pub_joint_cmd[j].publish(low_cmd.motorCmd[j]);
+//             }
+//             standing_cnt += 1;
+//             // std::cout << "standing_cnt: " << standing_cnt << std::endl;
+//         }
+
+//     }
+//     else {
+        
+//         standing_cnt = 0;
+
+//         for (int i = 0; i < 12; i++) {
+//             low_cmd.motorCmd[i].mode = 0x0A;
+//             low_cmd.motorCmd[i].q = 0;
+//             low_cmd.motorCmd[i].dq = 0;
+//             low_cmd.motorCmd[i].Kp = 0;
+//             low_cmd.motorCmd[i].Kd = 0;
+//             low_cmd.motorCmd[i].tau = a1_ctrl_states.joint_torques(i, 0);
+//             pub_joint_cmd[i].publish(low_cmd.motorCmd[i]);
+//         }
+//     }
+
+//     return true;
+// }
 
 // callback functions
 void GazeboA1ROS::gt_pose_callback(const nav_msgs::Odometry::ConstPtr &odom) {

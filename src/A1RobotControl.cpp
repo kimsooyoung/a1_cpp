@@ -318,7 +318,7 @@ void A1RobotControl::compute_joint_torques(A1CtrlStates &state) {
     }
 }
 
-Eigen::Matrix<double, 3, NUM_LEG> A1RobotControl::compute_grf(A1CtrlStates &state, double dt) {
+Eigen::Matrix<double, 3, NUM_LEG> A1RobotControl::compute_grf(A1CtrlStates &state, double dt, bool is_sim) {
     Eigen::Matrix<double, 3, NUM_LEG> foot_forces_grf;
     // first get parameters needed to construct the solver hessian and gradient
     // use euler angle to get desired angle
@@ -395,7 +395,8 @@ Eigen::Matrix<double, 3, NUM_LEG> A1RobotControl::compute_grf(A1CtrlStates &stat
         for (int i = 0; i < NUM_LEG; ++i) {
             inertia_inv.block<3, 3>(0, i * 3).setIdentity();
             // TODO: confirm this should be root_rot_mat instead of root_rot_mat
-            inertia_inv.block<3, 3>(3, i * 3) = state.root_rot_mat_z.transpose() * Utils::skew(state.foot_pos_abs.block<3, 1>(0, i));
+            // inertia_inv.block<3, 3>(3, i * 3) = state.root_rot_mat_z.transpose() * Utils::skew(state.foot_pos_abs.block<3, 1>(0, i));
+            inertia_inv.block<3, 3>(3, i * 3) = Utils::skew(state.foot_pos_rel.block<3, 1>(0, i));
         }
         Eigen::Matrix<double, DIM_GRF, DIM_GRF> dense_hessian;
         dense_hessian.setIdentity();
@@ -449,11 +450,20 @@ Eigen::Matrix<double, 3, NUM_LEG> A1RobotControl::compute_grf(A1CtrlStates &stat
 
         // initialize the mpc state at the first time step
         // state.mpc_states.resize(13);
-        state.mpc_states << state.root_euler[0], state.root_euler[1], state.root_euler[2],
-                state.root_pos[0], state.root_pos[1], state.root_pos[2],
-                state.root_ang_vel[0], state.root_ang_vel[1], state.root_ang_vel[2],
-                state.root_lin_vel[0], state.root_lin_vel[1], state.root_lin_vel[2],
-                -9.8;
+        state.mpc_states << 
+            state.root_euler[0], 
+            state.root_euler[1], 
+            state.root_euler[2],
+            state.root_pos[0], 
+            state.root_pos[1], 
+            state.root_pos[2],
+            state.root_ang_vel[0], 
+            state.root_ang_vel[1], 
+            state.root_ang_vel[2],
+            state.root_lin_vel[0], 
+            state.root_lin_vel[1], 
+            state.root_lin_vel[2],
+            -9.8;
 
         // previously we use dt passed by outer thread. It turns out that this dt is not stable on hardware.
         // if the thread is slowed down, dt becomes large, then MPC will output very large force and torque value
@@ -462,29 +472,49 @@ Eigen::Matrix<double, 3, NUM_LEG> A1RobotControl::compute_grf(A1CtrlStates &stat
         double mpc_dt = 0.0025;
 
         // in simulation, use dt has no problem
-        if (use_sim_time == "true") {
+        if (is_sim) {
             mpc_dt = dt;
         }
+        
+        std::cout << "is_sim : " << use_sim_time << std::endl;
+        std::cout << "mpc_dt : " << mpc_dt << std::endl;
 
         // initialize the desired mpc states trajectory
         state.root_lin_vel_d_world = state.root_rot_mat * state.root_lin_vel_d;
         // state.mpc_states_d.resize(13 * PLAN_HORIZON);
         for (int i = 0; i < PLAN_HORIZON; ++i) {
-            state.mpc_states_d.segment(i * 13, 13)
-                    <<
-                    state.root_euler_d[0],
-                    state.root_euler_d[1],
-                    state.root_euler[2] + state.root_ang_vel_d[2] * mpc_dt * (i + 1),
-                    state.root_pos[0] + state.root_lin_vel_d_world[0] * mpc_dt * (i + 1),
-                    state.root_pos[1] + state.root_lin_vel_d_world[1] * mpc_dt * (i + 1),
-                    state.root_pos_d[2],
-                    state.root_ang_vel_d[0],
-                    state.root_ang_vel_d[1],
-                    state.root_ang_vel_d[2],
-                    state.root_lin_vel_d_world[0],
-                    state.root_lin_vel_d_world[1],
-                    0,
-                    -9.8;
+            state.mpc_states_d.segment(i * 13, 13) <<
+                state.root_euler_d[0],
+                state.root_euler_d[1],
+                state.root_euler[2] + state.root_ang_vel_d[2] * mpc_dt * (i + 1),
+                state.root_pos[0] + state.root_lin_vel_d_world[0] * mpc_dt * (i + 1),
+                state.root_pos[1] + state.root_lin_vel_d_world[1] * mpc_dt * (i + 1),
+                state.root_pos_d[2],
+                state.root_ang_vel_d[0],
+                state.root_ang_vel_d[1],
+                state.root_ang_vel_d[2],
+                state.root_lin_vel_d_world[0],
+                state.root_lin_vel_d_world[1],
+                0,
+                -9.8;
+
+            // state.mpc_states_d.segment(i * 13, 13) <<
+            //     0.0, 
+            //     0.0, 
+            //     0.0,
+            //     0.0,
+            //     0.0,
+            //     state.root_pos_d[2],
+            //     state.root_ang_vel[0], 
+            //     state.root_ang_vel[1], 
+            //     state.root_ang_vel[2],
+            //     0.0,
+            //     0.0,
+            //     0.0,
+            //     -9.8;
+
+            // 0.3
+            // std::cout << "state.root_pos_d[2]" << state.root_pos_d[2] << std::endl;
         }
 
         // a single A_c is computed for the entire reference trajectory

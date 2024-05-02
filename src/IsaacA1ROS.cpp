@@ -68,7 +68,7 @@ IsaacA1ROS::IsaacA1ROS(ros::NodeHandle &_nh) {
 }
 
 bool IsaacA1ROS::update_foot_forces_grf(double dt) {
-    a1_ctrl_states.foot_forces_grf = _root_control.compute_grf(a1_ctrl_states, dt);
+    a1_ctrl_states.foot_forces_grf = _root_control.compute_grf(a1_ctrl_states, dt, true);
     return true;
 }
 
