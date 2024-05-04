@@ -55,7 +55,7 @@ int main(int argc, char **argv) {
         while (control_execute.load(std::memory_order_acquire) && ros::ok()) {
             // auto t1 = std::chrono::high_resolution_clock::now();
 
-//            ros::Duration(GRF_UPDATE_FREQUENCY / 1000).sleep();
+            // ros::Duration(GRF_UPDATE_FREQUENCY / 1000).sleep();
 
             // get t and dt
             now = ros::Time::now();

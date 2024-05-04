@@ -134,10 +134,11 @@ public:
 
     void resetFromROSParam(ros::NodeHandle &_nh) {
         _nh.param("stance_leg_control_type", stance_leg_control_type, 1);
-        _nh.param("use_terrain_adapt", use_terrain_adapt, 1);
-        
+        // std::cout << "stance_leg_control_type: " << stance_leg_control_type << std::endl;
+        _nh.param("use_terrain_adapt", use_terrain_adapt, 1);        
 
         _nh.param("a1_robot_mass", robot_mass, 13.0);
+        std::cout << "robot_mass: " << robot_mass << std::endl;
 
         double a1_trunk_inertia_xx;
         double a1_trunk_inertia_xy;

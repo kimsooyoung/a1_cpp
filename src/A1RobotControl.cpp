@@ -60,7 +60,9 @@ A1RobotControl::A1RobotControl() {
 A1RobotControl::A1RobotControl(ros::NodeHandle &_nh) : A1RobotControl() {
     std::cout << "init nh" << std::endl;
     nh = _nh;
-    _nh.param("use_sim_time", use_sim_time);
+    _nh.param<std::string>("use_sim_time", use_sim_time, "true");
+    std::cout << "use_sim_time : " << use_sim_time << std::endl;
+
     // initial debug publisher
     for (int i = 0; i < NUM_LEG; ++i) {
         std::string id = std::to_string(i);
@@ -476,8 +478,7 @@ Eigen::Matrix<double, 3, NUM_LEG> A1RobotControl::compute_grf(A1CtrlStates &stat
             mpc_dt = dt;
         }
         
-        std::cout << "is_sim : " << use_sim_time << std::endl;
-        std::cout << "mpc_dt : " << mpc_dt << std::endl;
+        // std::cout << "mpc_dt : " << mpc_dt << std::endl;
 
         // initialize the desired mpc states trajectory
         state.root_lin_vel_d_world = state.root_rot_mat * state.root_lin_vel_d;

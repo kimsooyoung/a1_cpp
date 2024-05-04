@@ -29,12 +29,8 @@ int main(int argc, char **argv) {
 
     // make sure the ROS infra using sim time, otherwise the controller cannot run with correct time steps
     std::string use_sim_time;
-    if (ros::param::get("/use_sim_time", use_sim_time)) {
-        if (use_sim_time != "true") {
-            std::cout << "ROS must set use_sim_time in order to use this program!" << std::endl;
-            return -1;
-        }
-    }
+    nh.param<std::string>("use_sim_time", use_sim_time, "true");
+    std::cout << "use_sim_time : " << use_sim_time << std::endl;
 
     // create a1 controller
     std::unique_ptr<GazeboA1ROS> a1 = std::make_unique<GazeboA1ROS>(nh);
@@ -52,7 +48,7 @@ int main(int argc, char **argv) {
         ros::Duration dt(0);
 
         while (control_execute.load(std::memory_order_acquire) && ros::ok()) {
-//            auto t1 = std::chrono::high_resolution_clock::now();
+            // auto t1 = std::chrono::high_resolution_clock::now();
 
             ros::Duration(GRF_UPDATE_FREQUENCY / 1000).sleep();
 
@@ -69,7 +65,7 @@ int main(int argc, char **argv) {
 
             auto t2 = std::chrono::high_resolution_clock::now();
             std::chrono::duration<double, std::milli> ms_double = t2 - t1;
-            std::cout << "MPC solution is updated in " << ms_double.count() << "ms" << std::endl;
+            // std::cout << "foot force is solved in " << ms_double.count() / 1000 << " s" << std::endl;
 
             if (!running) {
                 std::cout << "Thread 1 loop is terminated because of errors." << std::endl;
